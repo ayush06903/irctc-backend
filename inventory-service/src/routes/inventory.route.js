@@ -31,6 +31,7 @@ router.get('/schedules/:scheduleId/seats', userOrInternal, getScheduleSeats);
 
 // Internal: called by booking-service (protected by service key)
 router.post('/seats/lock', internalAuth, lockSeats);
+                         //ye internalAuth ka mtlb hai ki req ek service se doosri service directly jayegi wihout going through api-gateway
 router.post('/seats/unlock', internalAuth, unlockSeats);
 router.post('/seats/confirm', internalAuth, confirmSeats);
 router.post('/seats/cancel-booking', internalAuth, cancelBooking);

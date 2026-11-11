@@ -1,3 +1,4 @@
+//yha pr notification service is acting as consumer
 const { Kafka, logLevel } = require('kafkajs');
 const logger = require('./logger');
 const { config } = require('.');

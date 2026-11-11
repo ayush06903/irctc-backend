@@ -1,3 +1,4 @@
+//is file me we are creating an instance of kafka we have done similarly in notification.service coz it acts as consumer when we want to send otp to user
 const { Kafka, logLevel } = require('kafkajs');
 const logger = require('./logger');
 const {config} = require('.');

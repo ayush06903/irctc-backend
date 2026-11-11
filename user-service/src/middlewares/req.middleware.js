@@ -1,3 +1,4 @@
+//this is a production grade logging mioddleware--->logs all the info about incoming http req
 const logger = require('../config/logger');
 
 const reqLogger = (req, res, next) => {

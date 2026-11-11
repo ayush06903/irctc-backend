@@ -3,13 +3,14 @@ const {BadRequestError} = require('../utils/error');
 const scheduleService = require('../services/schedule.service');
 
 exports.createSchedule = asyncHandler(async(req, res) =>{
-     const {trainId, departureDate} = req.body;
+     const {trainId, departureDate} = req.body;               //fetching trainId and dedparture data from req body
 
      if(!trainId || !departureDate){
           throw new BadRequestError('trainId and departureDate are required');
      }
-
+                             //routing this incoming http req to correc busines logic presen in scheduleService
      const schedule = await scheduleService.createSchedule({trainId, departureDate});
+                                                         //we have passed trainId and departure date into createSchedule of scheduleService 
      return res.status(201).json({
           success: true,
           message: "Train Schedule created successfully",

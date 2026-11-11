@@ -1,3 +1,4 @@
+//HHERE WE HAVE GIVEN A FORMAT TO OUR LOGS
 const winston = require('winston');
 const {config} = require('.');
 

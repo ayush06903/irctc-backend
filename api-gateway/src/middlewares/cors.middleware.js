@@ -1,3 +1,4 @@
+//diffrent origions(ports/domains) se anee wali request ko handle krne ke lie hai have cors.js-->isme we configure ki kin sources se ane wali req ko our backend will accept and other sources will not be allowed to access our service... we do so for security purpouses
 const cors = require('cors');
 const { config } = require('../config');
 

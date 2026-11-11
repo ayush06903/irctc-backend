@@ -33,7 +33,7 @@ class EmailService {
                     code: error.code,
                });
 
-               if (retries < this.maxRetries - 1) {
+               if (retries < this.maxRetries - 1) {      //applying exponential backoff here
                     const delay = Math.pow(2, retries) * 1000;
                     await new Promise(resolve => setTimeout(resolve, delay));
                     return this.sendWithRetry(msg, retries + 1);
@@ -52,6 +52,7 @@ class EmailService {
           };
 
           return this.sendWithRetry(msg);
+                     //ye method iske upr defined hai
      }
 
      async sendWelcomeEmail(email, firstName) {

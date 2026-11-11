@@ -1,3 +1,6 @@
+//hmne producer->user service ko kafka broker se connect kr lia aur phir user service kafka broker ke diffrent topics me message send kregi
+// ab yh apr hmm 1->hmm consumer->notification service ko kafka broker se connect krenge
+              // 2->ye hmari notification service hmare kafka topics ko subscribe kregi aur phir un topics me present messages ko read kregi
 const { consumer, producer, connectProducer } = require('../../config/kafka');
 const emailService = require('../../services/email.service');
 const logger = require('../../config/logger');
@@ -7,16 +10,16 @@ const { withDLQ } = require('../../../../shared/utils/dlqHandler');
 class EmailConsumer {
      async start() {
           try {
-               await consumer.connect();
+               await consumer.connect();         //connected notification servioce with kafka
                await connectProducer(); // needed for DLQ publishing
                logger.info('Email consumer connected to Kafka');
 
-               await consumer.subscribe({
+               await consumer.subscribe({         //kafka broker me present in tpoics ko notification service subscribe kregi
                     topics: Object.values(KAFKA_TOPICS),
                     fromBeginning: false
                });
 
-               await consumer.run({
+               await consumer.run({           //ab to  read each message this method will run-->this method will read messages present in kafka topics and then process those messages
                     eachMessage: withDLQ(producer, KAFKA_TOPICS.DLQ_NOTIFICATION, logger, async ({ topic, parsedValue }) => {
                          logger.info(`Processing message from topic: ${topic}`);
                          await this.handleMessage(topic, parsedValue);
@@ -31,6 +34,7 @@ class EmailConsumer {
      }
 
      async handleMessage(topic, data) {
+                               //data = value thatwe defined in notification.producer.js
           switch (topic) {
                case KAFKA_TOPICS.OTP_EMAIL:
                     await this.handleOtpEmail(data);
@@ -65,6 +69,7 @@ class EmailConsumer {
           }
 
           await emailService.sendOtpEmail(email, otp, ttlMinutes || 5);
+                           //rhis sendOtpEmail method will send otp to email and this is defined in notification-service\src\services\email.service.js
           logger.info(`OTP email sent to ${email}`);
      }
 

@@ -1,10 +1,26 @@
 const express = require('express');
-const { requireAuth } = require('../middlewares/auth.middleware');
+const { requireAuth } = require('../middlewares/auth.middleware');  //THIS WILL AUTHENTICATE ACCESS TOKEN
 const { createProxy, getCircuitBreakerStatus } = require('../services/proxy');
-const { ipRateLimit, endpointRateLimit, combinedRateLimit } = require('../middlewares/rateLimiting.middleware')
+const { ipRateLimit, endpointRateLimit, combinedRateLimit } = require('../middlewares/rateLimiting.middleware')         //YE RATE LIMITIN GSRATEGES HAIN THAT WE HAVE DEFINED IN rateLimiing.middleware.js
 const { config } = require('../config');
 
 const router = express.Router();
+
+//see 01.png-->we lready seen in user service about private and public routes.... 
+              //we know ki there are two types of token 1-ACCESS TOKEN 
+              //                                        2-> REFRESH TOKEN
+              // to whenever we req to private route for each req we send our access token via cookie and then server verifies tthat access token and in case it is valid then only that route is accessabble to the user-->AUR ACCESS TOKEN KO VERIFY KRNE KA CODE HMNE auth.middleware.js ME LIKHA HAI
+    
+
+//PHLE WE WILL UNDERSTAND THE NEED OF API GATEWAY-->lets say client ko ko koi private route ko access krna hai like /profile(fech prfile) jo ki hai ek private route which we cant fetch without doing login(so we will have to verify the access token before processing the /profile route)
+           //see 02.png--> user ne /profile route pr req bheji and then user ne via cookie access token bheja aur vo /profile req gyi user service ke andar jo /profile route define kara hai and we did put authentication procedure in auth.middleware.js indide user-service/src/middlewares
+           //see 03.png--> ab we also have /booking(private route) which gives user detail about ticket booking to ye req gyi booking service me and since this is also a private route user has to be logged in and we must put a check in booking service which authenticaticates the user before processing the route to hmko booking service me bhi auth.middleware.js add krna hoga and attach it to /booking route
+
+           //BUT WHAT IF WE HAVE 20 SUCH SERVICES KYA HMM HAR SERVICE ME auth.middleware.js KO DEFINE KRENGE--NO rather we will put this auth.middleware.js in API GATEWAY too whenwver client sends a req to any service then the client will send its access token to the api gateway and then api gateway will authenticate tthe client and incase user successfuly authenticate hojayega to api gateway will route the client to the correct endpoint of service it had requested
+           //see 05.png__.api gate way ke doosre functions bhi lis kre hai and we will implement them all
+
+
+
 
 // ===========================
 // Service Proxy Routes
@@ -15,19 +31,21 @@ const router = express.Router();
  * Gateway Path: /api/users/auth/login
  * Service Path: /auth/login
 **/
-
+                        
+                        //ye jo createProxy function hai ye actual middleware hoga jo incoming requestts ko handle karega and match krega correct route ko correct service se
 const userServiceProxy = createProxy('userService', config.SERVICES.USER_SERVICE_URL);
 
 // public routes
 router.post(
-     '/users/auth/send-otp',
+     '/users/auth/send-otp',        //send-otp.verify-otp,google-auth they all come underr auth routes
      endpointRateLimit(5, 3600000), // 5 requests per hour
      userServiceProxy
 );
 
 router.post(
      '/users/auth/verify-otp',
-     endpointRateLimit(10, 3600000), // 10 requests per hour
+     endpointRateLimit(10, 3600000), // 10 requests per hour 
+     //endpointRateLimit is the rate limiting strategy that we are using 
      userServiceProxy
 );
 
@@ -52,7 +70,7 @@ router.post(
 // private routes
 router.get(
      '/users/user/profile',
-     requireAuth,
+     requireAuth,                 //since private routes kwe lie we first need to authenicate the user to we have passed the requireAuth function that we defined in imported auth.middleware.js file
      combinedRateLimit(),
      userServiceProxy
 )

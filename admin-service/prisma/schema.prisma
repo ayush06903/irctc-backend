@@ -22,7 +22,8 @@ model Station {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  routeStations RouteStation[]
+  routeStations RouteStation[]      
+  //ye routeStations ye batata hai ki ek station multiple rooutes ka part ho skta hai
 
   @@index([name])
   @@index([code])
@@ -38,9 +39,9 @@ model Train {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  seats     Seat[]
-  route     Route?
-  schedules Schedule[]
+  seats     Seat[]       //ek train/coach can have multiple seats
+  route     Route?       //one train can have only one route
+  schedules Schedule[]   //ek train runs on multipl datys of weeek
 
   @@map("trains")
 }
@@ -88,12 +89,13 @@ model RouteStation {
   route   Route   @relation(fields: [routeId], references: [id], onDelete: Cascade)
   station Station @relation(fields: [stationId], references: [id], onDelete: Cascade)
 
-  @@unique([routeId, sequenceNumber])
+  @@unique([routeId, sequenceNumber])       //ek routte me station number(1,2,3,4) repeate nhi hoga 
   @@unique([routeId, stationId])
   @@map("route_stations")
 }
 
 model Schedule {
+    //ye schedule model(table will save info related to train ke schedule(koi train kis data pr run ho rhi hai) )
   id            String         @id @default(uuid())
   trainId       String
   departureDate DateTime       @db.Date // The date this train runs
@@ -103,7 +105,7 @@ model Schedule {
 
   train Train @relation(fields: [trainId], references: [id], onDelete: Cascade)
 
-  @@unique([trainId, departureDate])
+  @@unique([trainId, departureDate])          //this tells ki ek train ek hi date pr do baar depart nhi kr ski hai
   @@map("schedules")
 }
 

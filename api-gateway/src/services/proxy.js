@@ -1,10 +1,16 @@
+//YE proxy.js DOES 3 THINGS  1->IMPLEMENTS CIRCUIT BREAKER
+                           //2->REQUEST ROUTINGG
+                           //3->IMPLEMETS createproxy FUNCTION
+
 const axios = require('axios');
 const { config } = require('../config');
 const { ServiceUnavailableError, GatewayTimeoutError } = require('../utils/error');
 const logger = require('../config/logger');
 
+
 /**
- * Circuit Breaker implementation
+ * Circuit Breaker implementation--> SEE 06.PNG TO SEE THE NEED OF CIRCUIT BREAKER
+ * see 07.png--. to see how circuit breaker solves this problem--->5 ffailed req ke baad gateway us service ke lie(jo currently down hai) req lena hi band krdega
  * Prevents cascading failures when downstream services are down
  */
 class CircuitBreaker {
@@ -13,28 +19,29 @@ class CircuitBreaker {
           this.failureCount = 0;
           this.threshold = threshold;
           this.timeout = timeout;
-          this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
+          this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN--->see 08.png
           this.nextAttempt = Date.now();
      }
 
      async execute(request) {
-          if (this.state === 'OPEN') {
-               if (Date.now() < this.nextAttempt) {
+          if (this.state === 'OPEN') {        //service unavailable
+               if (Date.now() < this.nextAttempt) {  //if currently time is 1:55 pm but our api gateway is next scheduled tto try and establish connection again on 2:00 pm
                     throw new ServiceUnavailableError(
                          `Service ${this.serviceName} is temporarily unavailable. Circuit breaker is OPEN.`
                     );
                }
+               //if current time is 2:30 pm and out api gateway was schedduled to try to reestablish connection on 2:00pm
                // Try to close the circuit
-               this.state = 'HALF_OPEN';
+               this.state = 'HALF_OPEN';              //whenever we try to close the circuit state would be half open
                logger.info(`Circuit breaker HALF_OPEN for ${this.serviceName}`);
           }
 
           try {
-               const response = await request();
-               this.onSuccess();
+               const response = await request();       //we try to hit our http req
+               this.onSuccess();        //jo http req thi vo successfuly execute ho gyi
                return response;
           } catch (err) {
-               this.onFailure();
+               this.onFailure();        //http req fail hogyi
                throw err;
           }
      }
@@ -52,13 +59,14 @@ class CircuitBreaker {
           if (this.failureCount >= this.threshold) {
                this.state = 'OPEN';
                this.nextAttempt = Date.now() + this.timeout;
+                                               //timeout tells api gateway kki usko kitna time wait krna hai to again retry to establish connection btw api gateway and down service
                logger.error(
                     `Circuit breaker OPEN for ${this.serviceName}. Next attempt at ${new Date(this.nextAttempt).toISOString()}`
                );
           }
      }
 
-     getState() {
+     getState() {        //ye perticular service ka poora status return krta hai
           return {
                service: this.serviceName,
                state: this.state,
@@ -79,9 +87,9 @@ const circuitBreakers = {
      inventoryService: new CircuitBreaker('inventory-service')
 };
 
-
+//before implementing the other two operations of api gateway first we will try to understand the whole flow and which operation happens in what order-->09.png and 10.png
 /**
- * Forward request to downstream service
+ * 2->Forward request to downstream service--->ye method req ko gateway se conneccted backend microservice pr route/forward krega
  */
 async function forwardRequest(serviceUrl, path, method, data, headers, circuitBreaker) {
      const url = `${serviceUrl}${path}`;
@@ -94,7 +102,7 @@ async function forwardRequest(serviceUrl, path, method, data, headers, circuitBr
           headers: {
                ...headers,
                // Remove host header to avoid conflicts
-               host: undefined,
+               host: undefined,            //gateway ka host is diffrent from service ka host
                // Remove content-length to let axios recalculate
                'content-length': undefined,
           },
@@ -122,6 +130,7 @@ async function forwardRequest(serviceUrl, path, method, data, headers, circuitBr
 
      try {
           const response = await circuitBreaker.execute(() => axios(requestConfig));
+                                //ye hmne circuit breaker ke execute method ko call kara aur then axios ka use krkr req ko route krdia to correct microservice
 
           logger.debug(`Response from ${url}:`, {
                status: response.status,
@@ -172,7 +181,7 @@ async function forwardRequest(serviceUrl, path, method, data, headers, circuitBr
 /**
  * Proxy middleware factory
  */
-function createProxy(serviceName, serviceUrl) {
+function createProxy(serviceName, serviceUrl) {            //I DID GET WHY WE ARE TRANSFORMING THE ROUTE HERE BUT DONT HAVEE CLEAR UNDERSANDING RN
      const circuitBreaker = circuitBreakers[serviceName];
 
      if (!circuitBreaker) {
@@ -184,7 +193,7 @@ function createProxy(serviceName, serviceUrl) {
                // Extract path (remove /api prefix only)
                // Gateway: /api/users/auth/login -> Service: /auth/login
                // Gateway: /api/users/user/profile -> Service: /user/profile
-               logger.info(req.path);
+               logger.info(req.path);         //see 11.png to see result of each line here
                const pathParts = req.path.split('/').filter(Boolean);
                logger.info(pathParts);
                // Remove 'users' (first part), keep the rest
@@ -192,7 +201,7 @@ function createProxy(serviceName, serviceUrl) {
                const servicePath = '/' + pathParts.slice(1).join('/');
                logger.info(servicePath);
 
-               const result = await forwardRequest(
+               const result = await forwardRequest(         //Calling oopr defined forwardRequest method which will route the req from api gateway to correct microserice of our backend
                     serviceUrl,
                     servicePath + (req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : ''),
                     req.method,
@@ -202,7 +211,7 @@ function createProxy(serviceName, serviceUrl) {
                );
 
                // Forward response headers (except some)
-               const excludeHeaders = ['connection', 'keep-alive', 'transfer-encoding', 'host'];
+               const excludeHeaders = ['connection', 'keep-alive', 'transfer-encoding', 'host'];         //we removed these coz gateway in headers ko khud manage krta hai
                Object.keys(result.headers).forEach((key) => {
                     if (!excludeHeaders.includes(key.toLowerCase())) {
                          res.setHeader(key, result.headers[key]);

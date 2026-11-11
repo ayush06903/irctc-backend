@@ -12,19 +12,20 @@ enum BookingStatus {
   PAYMENT_PENDING
   CONFIRMING
   CONFIRMED
-  CANCELLING
-  FAILED
+  CANCELLING        // if user cancles the booking
+  FAILED            // if something goes wrong
   CANCELLED
-  EXPIRED
+  EXPIRED           //if user doesnot completes paymen in given time 
 }
 
-enum SagaStep {
-  HOLD_SEATS
-  CREATE_PAYMENT
-  CONFIRM_SEATS
+enum SagaStep {     //jo hm saga pattern ko use kr rhe hai to manage transaction usme jo jo steps hain unko iske andar define kara hai
+  HOLD_SEATS       //ye task we will perform in inventory service
+  CREATE_PAYMENT   //payment service
+  CONFIRM_SEATS    //inventory srvice me
   COMPLETE
 }
 
+//har individual sagastep ke diffrent status ho skte hai
 enum SagaStepStatus {
   PENDING
   COMPLETED
@@ -38,7 +39,7 @@ enum IdempotencyStatus {
   COMPLETED
 }
 
-model Booking {
+model Booking {                   //is table me hmm entry krenge jo bhi users booking krenge
   id             String        @id @default(uuid())
   userId         String
   scheduleId     String
@@ -101,7 +102,7 @@ model Passenger {
   @@map("passengers")
 }
 
-model SagaLog {
+model SagaLog {              //jo bhi transaction ka record hoga usko store krenge is table me
   id        String         @id @default(uuid())
   bookingId String
   step      SagaStep

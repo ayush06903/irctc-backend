@@ -1,9 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cookieParser = require('cookie-parser');
-const helmet = require('helmet');
+const helmet = require('helmet');       //simple middleware which adds multiple security headers in app and protects it from common web vulnerabilities
 const { config } = require('./config');
-const logger = require('./config/logger');
+const logger = require('./config/logger');      //to maintain logs
 
 const authRoutes = require('./routes/auth.route');
 const userRoutes = require('./routes/user.route');
@@ -26,17 +26,17 @@ app.use(cookieParser());
 app.use("/auth", authRoutes);
 app.use("/user", userRoutes);
 
-app.get("/", (req, res) => {
+app.get("/", (req, res) => {      //home route
      res.send("Hello from index.js of user-service");
 })
 
-app.get("/health", (req, res) => {
+app.get("/health", (req, res) => {            //
      res.status(200).json({
           message: "ok"
      })
 })
 
-app.use(errorHandler)
+app.use(errorHandler)         //using error middleware to see ki jo incoming req ayi thi vo fulfil hogyi ya koi error aya and if error aya to we can handle iit gracefully using tthis middleware
 
 const startServer = async () => {
      try {

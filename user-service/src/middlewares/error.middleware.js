@@ -1,4 +1,5 @@
 // middlewares/error.middleware.js
+//jo hmne utils/error.js ke andar custom errors define kre the unko yha import kara aur handle kra
 const { AppError } = require('../utils/error');
 const {config} = require('../config');
 const logger = require('../config/logger');

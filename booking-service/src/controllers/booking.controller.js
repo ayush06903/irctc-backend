@@ -3,13 +3,14 @@ const { BadRequestError } = require('../utils/error');
 const bookingService = require('../services/booking.service');
 
 exports.createBooking = asyncHandler(async (req, res) => {
-     const userId = req.user.id;
+     const userId = req.user.id;              //since this is a private route tto user jb logged in hoga tb hi booking kr apyega
      const { scheduleId, seatIds, passengers, idempotencyKey, fromStationId, toStationId, fromSeq, toSeq } = req.body; // --- SEGMENT BOOKING: added segment params
 
      if (!scheduleId || !seatIds || !passengers || !idempotencyKey) {
           throw new BadRequestError('scheduleId, seatIds, passengers, and idempotencyKey are required');
      }
 
+     //now hamara next kaam is too route this http req to correct business logic
      // --- SEGMENT BOOKING: Pass segment params to service ---
      const result = await bookingService.createBooking(
           userId, scheduleId, seatIds, passengers, idempotencyKey,

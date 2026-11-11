@@ -1,3 +1,5 @@
+//see 06.png-->admin service jo bhi events publish kregi into kafka then hmari search service will act as consumer and subscribe to all the events published into kafka
+//we also used the same code in notification service when we wanted to send otp to the user then user-service was publishing user data into redis and then notification service was active as consumer and was subscribing to the messages present in kafka topics
 const { Kafka, logLevel } = require('kafkajs');
 const logger = require('./logger');
 const { config } = require('.');

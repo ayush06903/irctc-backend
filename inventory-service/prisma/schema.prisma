@@ -1,4 +1,4 @@
-generator client {
+jjgenerator client {
   provider = "prisma-client-js"
 }
 
@@ -13,7 +13,8 @@ enum SeatStatus {
   CANCELLED
 }
 
-model ScheduleInventory {
+// is table me we store data about all the schedule that are stored in inventory
+model ScheduleInventory {                 // each row represent a schedule
   id            String   @id @default(uuid())
   scheduleId    String   @unique
   trainId       String
@@ -37,7 +38,11 @@ model ScheduleInventory {
   @@map("schedule_inventories")
 }
 
-model SeatInventory {
+model SeatInventory {       //in seatInventory hmm train me present har seat ke lie entry create krenge
+                            //ye jo seatInventory table hai ye source of truuth hai--->ye hme actual status batayegi seat ka(booked/available/locked)
+                            //is seat inventory table me hmm ROW LEVEL USE KRENGE USE KRENGE FOR BOOKING
+
+          //For aggregate summery we need to read a single row of scheduleInventory and to checck availablity of seats of perticular schedule we need to read each row of seatInventory(slow operation)
   id                  String     @id @default(uuid())
   scheduleInventoryId String
   scheduleId          String
@@ -66,6 +71,7 @@ model SeatInventory {
 
 // --- SEGMENT BOOKING: Route topology per schedule ---
 // Stores the ordered list of stations for each schedule, populated from SCHEDULE_CREATED event.
+//since segment booking ko enable krne ke lie we need sequence number of all the stations to jo ye hamari routestop table hai ye stationId ko sequence number me convert krti hai aur phr hme ordered list of stations provide krti hai
 // Used to resolve station IDs to sequence numbers for segment overlap checks.
 model RouteStop {
   id             String @id @default(uuid())
@@ -84,7 +90,8 @@ model RouteStop {
 // --- SEGMENT BOOKING: Per-segment seat lock/booking tracking ---
 // Each row represents a seat locked or booked for a specific segment [fromSeq, toSeq).
 // Two segments overlap if: a.fromSeq < b.toSeq AND b.fromSeq < a.toSeq
-model SeatSegmentLock {
+model SeatSegmentLock {             //ye table hmari segment booking ko enable krti hai--?13 hour 5 min
+                    //lets say hmne kisi segment ke lie booking kri to seaInventory table me hmmne row level lock apply kara(us seat ka status locked hai ab) tabb hmm seatSegmentLock me entry krte hai which includes info of ki kis segment ke lie booking ho rhi hai
   id            String     @id @default(uuid())
   scheduleId    String
   seatId        String

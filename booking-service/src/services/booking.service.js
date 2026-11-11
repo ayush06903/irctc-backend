@@ -196,12 +196,14 @@ const createBooking = async (userId, scheduleId, seatIds, passengers, idempotenc
 
      // From here on every exit path must either complete or release the claim.
      const sortedSeatIds = [...seatIds].sort(); // sorted: deadlock prevention for distributed locks
+                                                //mtlb maan lo 2 users hai dono ko seat number 1 and 2 book krni hai user A ne seat 1 ko lock krdiya and user B ne seat 2 ko lock krdia ab user A wait krega user B to release lock on seat 2 and user B will wait for user A to release lock on use A-->to avoid this deadlock scenerio we islie hi hmne upr seatId ko sort krdia tha so that dono users phlle seat 1 lockkrne ki try ker phr seat 2 and so on
      let booking;
      let lockValue = null;
 
      try {
           // 3. Fetch schedule availability and seat details from inventory
           const availability = await inventoryClient.getAvailability(scheduleId);
+                                                    //this getAvailability method is defined inside inventoryClient.js and this inventoryCLient.js ka getAvailability method sends http req to inventory service and then inventory service return the schedule ccorresponding to the scheduleId that we are passing 
           if (availability.status !== 'ACTIVE') {
                throw new BadRequestError('Schedule is not active');
           }
@@ -212,33 +214,40 @@ const createBooking = async (userId, scheduleId, seatIds, passengers, idempotenc
           }
 
           // --- SEGMENT BOOKING: Pass segment params to get segment-aware seat availability ---
-          const seatData = await inventoryClient.getSeats(scheduleId, {
+          const seatData = await inventoryClient.getSeats(scheduleId, {           //ab hamara kaam hai to find seat availability and get seat data
+                                              //ye  getSeats method is defined in inventoryClient.js aur ye getSeats method inventory service me http req bhejti haiaur inventory servic eme bhi we have defined a getSeats method and then inventory service is scheduleId ke correspondding available seats ko return krtii hai
                fromSeq: fromSeq || undefined,
                toSeq: toSeq || undefined,
           });
+          //storing is seat ka data in map
           const seatMap = new Map(seatData.seats.map(s => [s.seatId, s]));
 
-          // Verify all requested seats exist and are available
+          //ab hamara next kaam hai to verify ki jo bhi seat data mila hai vo correct hai ki nhi aur user ne jo bhi seats select kri hai vo available hai ki nhi
           const bookingSeats = [];
           let totalAmount = 0;
-          for (const seatId of seatIds) {
+          for (const seatId of seatIds) {       //didnot get this
                const seat = seatMap.get(seatId);
                if (!seat) {
                     throw new NotFoundError(`Seat ${seatId} not found in schedule`);
                }
                // --- SEGMENT BOOKING: Use segmentStatus when available for segment-aware validation ---
+               //har seat ke lie we will have status and segment status agar kisi sea ka segment status undefines hai to iska mtlbb hai vo seat poorin journey ke lie booked hai
                const isAvailable = (fromSeq && toSeq && seat.segmentStatus !== undefined)
-                    ? seat.segmentStatus === 'AVAILABLE'
-                    : seat.status === 'AVAILABLE';
+                                                       //mtlb ye seat poori journey ke lie booked nhi hai 
+                    ? seat.segmentStatus === 'AVAILABLE'//ye segmentStatus checks availablity of seat for the station that user has choosen(maan lo 1 o 7 station number hai and the user wants to book ticket from 2 to 5 station numbers so this will check weather the seat is empty for these stations)
+                    : seat.status === 'AVAILABLE';     //ye seat.status checks availability of status for whole joourney from first station to last
                if (!isAvailable) {
                     throw new ConflictError(`Seat #${seat.seatNumber} is not available for this segment`, 'SEATS_UNAVAILABLE');
                }
+
+               //hmm yha tak aa gye iska mtlb hai ki seats available hain
                bookingSeats.push(seat);
                totalAmount += seat.price;
           }
 
-          // 4. Acquire Redis distributed locks (segment-aware keys for segment bookings)
+          // 4. Acquire Redis distributed locks (segment-aware keys for segment bookings)        
           const lockResult = await acquireSeatLocks(
+                                   //this method is defined in utils folder
                scheduleId,
                sortedSeatIds,
                `pre-${Date.now()}`, // temporary ID before booking is created
@@ -247,7 +256,7 @@ const createBooking = async (userId, scheduleId, seatIds, passengers, idempotenc
                toSeq     // --- SEGMENT BOOKING: include in lock key
           );
 
-          if (!lockResult.acquired) {
+          if (!lockResult.acquired) {    //hmm lock isliye nhi lga paye coz kisi aur user ne use seat ki key ki entry redis me phle se exist krti hai(meaning koi aur user is already trying to book it and has put locck on seat)
                throw new ConflictError(
                     'One or more seats are being booked by another user. Please try again.',
                     'SEATS_LOCKED'
@@ -298,7 +307,7 @@ const createBooking = async (userId, scheduleId, seatIds, passengers, idempotenc
           // 6. Execute saga Step 1: Hold seats in inventory
           await saga.executeHoldSeats(booking, sortedSeatIds, config.LOCK_TTL_SECONDS, fromSeq, toSeq); // --- SEGMENT BOOKING
 
-          // 7. Execute saga Step 2: Create payment order
+          // 7. Execute saga Step 2: jo bhi payment gateway we are using uska Create payment order
           const paymentOrder = await saga.executeCreatePayment(booking);
 
           // Refresh booking after updates
@@ -345,8 +354,12 @@ const createBooking = async (userId, scheduleId, seatIds, passengers, idempotenc
           // work happened downstream. Failures before that point (schedule inactive,
           // seat unavailable, lock contention) have nothing to compensate, and running
           // compensateAll for them would refund payments that never existed.
-          if (booking) {
+
+          if (booking) {         //checking ki kya booking table me entry ho payi thi ya nhi
+               //agar booking create hogyi hai to we ca see ki boooking create krne ke baad ke steps saga steps hain
+               //to agar booking create krne ke baad kch error face kara hai to pakka saga steps me kch dikkat ayi hogi
                await saga.compensateAll(booking, sortedSeatIds);
+                                                //we passed sortedSeatId's coz jo seats lock hui hongi process me hmko unhe bhi unlock krna hai
                await prisma.booking.update({
                     where: { id: booking.id },
                     data: {

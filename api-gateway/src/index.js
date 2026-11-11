@@ -1,3 +1,4 @@
+//this index.js is ccopy of index.js of user service
 require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');

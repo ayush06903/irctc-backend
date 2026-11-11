@@ -1,3 +1,4 @@
+//if we need to send req to inventtory service from booking service then we send it via inventoryClient.js like we use paymentCLient.js to send http req from booking service to inventory service
 const axios = require('axios');
 const { config } = require('../config');
 const logger = require('../config/logger');

@@ -1,3 +1,4 @@
+//yha pr we have defined all the custome errors
 class AppError extends Error {
      constructor(message, statusCode, code) {
           super(message);

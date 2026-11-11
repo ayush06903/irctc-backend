@@ -76,14 +76,19 @@ function buildLockKeys(scheduleId, seatIds, fromSeq, toSeq) {
  * @param {number} [toSeq] - Segment end (for segment-aware keys)
  * @returns {Promise<{acquired: boolean, lockValue: string|null}>}
  */
+//we have used some luascrip for this
 async function acquireSeatLocks(scheduleId, seatIds, bookingId, ttlSeconds, fromSeq, toSeq) {
-     const keys = buildLockKeys(scheduleId, seatIds, fromSeq, toSeq);
+               //ye ek atomic operation hot hai mtlb yaa to jo bhi seatId's yha pr recieve hui hai un sbpr locks apply honge nhi to kisi pr bhi nhi
+     const keys = buildLockKeys(scheduleId, seatIds, fromSeq, toSeq);        //we are creating key for each seat that we are trying to lock
+                                                                             //Lock key pattern: booking:lock:seat:{scheduleId}:{seatId}
+
      const lockValue = `${bookingId}:${Date.now()}`;
 
      try {
+          //we are locking all these keys using lua script.. in keys ko lock krne ka mtlb hai seats ko lock krna
           const result = await redis.eval(ACQUIRE_SCRIPT, keys.length, ...keys, lockValue, ttlSeconds);
 
-          if (result === 1) {
+          if (result === 1) {        //agarr result me 1 mila to lock successfully apply ho gya hai
                logger.info(`Distributed locks acquired for booking ${bookingId}`, {
                     scheduleId,
                     seatCount: seatIds.length,
@@ -92,6 +97,7 @@ async function acquireSeatLocks(scheduleId, seatIds, bookingId, ttlSeconds, from
                return { acquired: true, lockValue };
           }
 
+          //agar 1 ki jagah kch aur milta hai meaning lock aquire nhi ho paya then we return false
           logger.info(`Failed to acquire locks — seats already locked`, {
                scheduleId,
                bookingId,

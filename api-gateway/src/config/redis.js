@@ -1,3 +1,4 @@
+//this provides us singleton redis connection as we have discussed in user service
 const Redis = require('ioredis');
 const { config } = require('.');
 const logger = require('./logger');

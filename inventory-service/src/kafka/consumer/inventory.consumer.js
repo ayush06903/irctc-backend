@@ -14,6 +14,7 @@ class InventoryConsumer {
                topics: [
                     KAFKA_TOPICS.SCHEDULE_CREATED,
                     KAFKA_TOPICS.SCHEDULE_CANCELLED,
+                    //see 01.png --> hmm yhi do kafka topics ko subscribe kr rhe hain
                ],
                fromBeginning: true,
           });

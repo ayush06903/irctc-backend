@@ -4,7 +4,10 @@ const logger = require('../config/logger');
 const prisma = require('../config/prisma');
 
 const createSchedule = async (data) => {
+                         //recieving trainId and departure date in data variable
      const { trainId, departureDate } = data;
+
+     //checking ki jis train ka schedule hmm create krne ki koshish kr rhe hain vo train hmare db me present hai bhi ya nhi
      const train = await prisma.train.findUnique({
           where: { id: trainId },
           include: {
@@ -29,16 +32,18 @@ const createSchedule = async (data) => {
           throw new BadRequestError('Invalid departure date format. Use YYYY-MM-DD');
      }
 
-     // Check for duplicate schedule
+     // Checking ki khi hamri train ka same day pr koi scheddule phle se to exist nhi krta hai
      const existing = await prisma.schedule.findUnique({
           where: { trainId_departureDate: { trainId, departureDate: parsedDate } },
      });
      if (existing) throw new ConflictError('Schedule already exists for this train on this date');
 
+     //next kaam hai is to create schedule in schedule table of prisma db
      const schedule = await prisma.schedule.create({
           data: { trainId, departureDate: parsedDate },
      });
 
+     //ab next kaam hai o publish the create schedule event in kafka
      // Build a rich event payload with everything consumers need
      const eventPayload = {
           scheduleId: schedule.id,
@@ -67,6 +72,7 @@ const createSchedule = async (data) => {
           })),
      };
 
+     //ab is eventPayload ko hmm kafka me publish kr denge
      // This event goes to both inventory-service and search-service via Kafka
      await adminProducer.publishScheduleCreated(eventPayload);
      logger.info(`Schedule created and event published for train ${train.trainNumber} on ${departureDate}`);

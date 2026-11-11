@@ -4,20 +4,25 @@ const logger = require('../config/logger');
 const adminProducer = require('../kafka/producer/admin.producer');
 
 const createStation = async (data) => {
+                         //data lagane se jo bhi data controller ne service me bhejsa hai vo data me store hojayega
+
+     //hmm phle ye check krenge ki kahi ye station phle se hi exist to nhi krta in our prisma db
      const existing = await prisma.station.findUnique({
           where: { code: data.code }
      });
 
-     if (existing) {
+     if (existing) {             //throwing error in case station already exists
           throw new ConflictError('Station code already exists');
      }
 
+     //incase ye staion already present nhi hai in our prisma db then we will create a new station
      const station = await prisma.station.create({
           data
      });
 
      logger.info('Station Created', { id: station.id, code: station.code });
 
+     //ab since jo hmne flow dekha tha 01.png me ki admin service me hmm jo bhi create krenge un events ko kafka me publish kr denge s
      // Publish event - fire and forget (non-critical)
      await adminProducer.publishStationCreated(station).catch((err) => {
           logger.error('Failed to publish station created event', { error: err.message });

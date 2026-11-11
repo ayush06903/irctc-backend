@@ -1,3 +1,4 @@
+//this file verifies access token
 const jwt = require('jsonwebtoken');
 const { config } = require('../config');
 const { UnauthorizedError } = require('../utils/error');

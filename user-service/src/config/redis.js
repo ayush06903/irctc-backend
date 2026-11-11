@@ -1,3 +1,5 @@
+//THIS FILE PROVIDES REDIS CONNECTION TO OUR USER SERVICE
+//WE HAVE USESD SINGLETON DESIGN PATTERN HERE---->service ke diffrent diffrent controllers ke lie diffrent redis connection establish krne se accha we do it once and they will just import this from here
 const Redis = require('ioredis');
 const {config} = require('.');
 const logger = require('./logger');
@@ -7,18 +9,21 @@ class RedisClient {
      static isConnected = false;
 
      constructor(){
-          // prevent direct instantiation
+          // prevent direct instantiation line new RediCllient({}) coz agar hmm direct instantiation alllowed kr denge aur if we do new RedisClient({}) multiple timesa then multiple redis connections will be established 
 
      }
 
+
+     //thats why we use getInstance here which checks weather a connection is already established and if yes then we use alreay established redis connection
      static getInstance(){
           if(!RedisClient.instance){
                RedisClient.instance = new Redis(config.REDIS_URL, {
                     retryStrategy: (times) =>{
+                         //ye retry srategy redis se connection establish krne ke lie retries krti hai
                          const delay = Math.min(times * 50, 2000);
                          return delay;
                     },
-                    maxRetriesPerRequest: 3
+                    maxRetriesPerRequest: 3       //itni baar retry kregi retryStrategy to establish connection
                })
 
                RedisClient.setupEventListeners();

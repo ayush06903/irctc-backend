@@ -2,24 +2,28 @@ name: irctc-backend
 
 services:
   postgres:
-    image: postgres:15
-    container_name: postgres
+    image: postgres:15 #pulling postgres ki image from docker hub
+    container_name: postgres       #agar kisi reason se container crash bhi hua to container hmesha automatically restart hoga
     restart: always
     environment:
+      #is postgres service ko use krne ke lie jo credentials ki need hai 
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: irctcpass
-      POSTGRES_DB: postgres
+      POSTGRES_DB: postgres         #default db
     ports:
-      - "5432:5432"
+      - "5432:5432"           #jis port pr hmari postgres service run hogi
+      #left wla local machine ka port hai : right wla container ka port
     volumes:
+      #since jo data hmara posgres db me data hai usko hme persist krna hai/permanently store krna hai bhle hi hmara container down ho jaye to we simultaneously store data in postgres db in given volume
       - postgres_data:/var/lib/postgresql/data
     networks:
       - irctc-network
   
-  pgadmin: 
+  pgadmin:     #pgadmin is graphical user interface which manages postgres tables
     image: dpage/pgadmin4
     container_name: pgadmin
     environment:
+    #jb hmm pgadmin ke ui ko hit krenge to we will put this email and password
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin
     ports:
@@ -29,20 +33,27 @@ services:
     networks:
       - irctc-network
 
-  redis:
-    image: redis/redis-stack:6.2.6-v19
+  redis:            #will be used for caching
+    image: redis/redis-stack:6.2.6-v19        #this image that we have pulled provides two things
+                                                                                        #1->Redis server 
+                                                                                        #2->Redis insight-->gui hai which will visualize the entries that we do in redis server
     container_name: redis
     restart: always
     environment:
       REDIS_ARGS: "--requirepass irctcpass"
+                   #we set password(pass) in required field and the password in irctc pass
     ports:
-      - "6379:6379"
-      - "8001:8001"
+      - "6379:6379"          #redis server ki local and container port
+      - "8001:8001"          #redis insight ki local and container port
     volumes:
+       #redis lka data will be permanently stored in this redis_data:/data volume
       - redis_data:/data
     networks:
       - irctc-network
-  zookeeper:
+  zookeeper:           #since hmare kafka server me multiple brokers ho skte hai to zookeeper 1->keeps track ki konseb zookeeper alive hain,kon se inactive,hain kon se inactive hai through heartbeat mechhanism
+                                                                                            # 2->leader election
+                                                                                            # 3->manages configuration of diffrent topics that are present in broker
+                                                                                            # 4->stores metadata
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
     restart: always
@@ -111,7 +122,7 @@ services:
     networks:
       - irctc-network
 
-  kibana:
+  kibana:                #hmm jo bhi data elastic search me upload krte hai us data ko we can visualize using kibana
     image: docker.elastic.co/kibana/kibana:8.12.0
     container_name: kibana
     restart: always

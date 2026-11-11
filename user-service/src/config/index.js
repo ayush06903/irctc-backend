@@ -1,3 +1,4 @@
+//YE FILE .env FILE SE SAARE ENVIROMENT VAIABLE KO IS FILE ME SAVE KRLETI HAI SO THAT IN FILES WHERE WE ARE WRITING LOGIC THERE WE CA GIVE REFRENCE TO config file AND NOT .env for ex---->http://localhost:${config.PORT}
 const config = {
   SERVICE_NAME: require('../../package.json').name,
   PORT: Number(process.env.PORT) || 4001,

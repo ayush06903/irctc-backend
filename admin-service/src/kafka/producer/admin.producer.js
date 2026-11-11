@@ -12,6 +12,7 @@ class AdminProducer {
           }
      }
 
+     //ye method will send message to kafka-->hmne is method ko neeche ke methods ke andar call kara hai
      async sendMessage(topic, key, value) {
           try {
                await this.initialize();

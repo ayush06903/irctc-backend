@@ -57,6 +57,7 @@ class InventoryProducer {
 
      async publishSeatAvailabilityUpdated(scheduleId, trainId, available, locked, booked) {
           return this.sendMessage(
+                   //this sendMessage method which is defined above is responsible for pushing the event in kafka
                KAFKA_TOPICS.SEAT_AVAILABILITY_UPDATED,
                `schedule-${scheduleId}`,
                { scheduleId, trainId, available, locked, booked }

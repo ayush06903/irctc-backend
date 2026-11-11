@@ -1,3 +1,4 @@
+//jo hmari api-gateway service logs likhegi ye file uska format batati hai-->[${timestamp}] [${level}] [${service}]: ${message}
 const winston = require('winston');
 const {config} = require('.');
 

@@ -49,6 +49,8 @@ function extractError(error) {
 
 const paymentClient = {
      async createPaymentOrder(bookingId, amount, userId, idempotencyKey) {
+          //this method will send http req to payment service
+          //currently we are in booking service and if we want to send req from booking service to payment service we are using paymentClient file like we used inventoryService file to route http req from booking service from booking service to inventory service 
           return withRetry(async () => {
                const { data } = await client.post('/orders', {
                     bookingId,

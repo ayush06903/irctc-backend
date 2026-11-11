@@ -1,9 +1,9 @@
 const { Kafka, logLevel } = require('kafkajs');
 const logger = require('./logger');
 const {config} = require('.');
-const kafka = new Kafka({
+const kafka = new Kafka({       //ye we have created an instance of kafka
      clientId: config.KAFKA_CLIENT_ID,
-     brokers: [config.KAFKA_BROKER || 'localhost:9093'],
+     brokers: [config.KAFKA_BROKER || 'localhost:9093'],     //for now we are only using a single broker
      logLevel: logLevel.ERROR,
      retry: {
           initialRetryTime: 300,
@@ -12,12 +12,12 @@ const kafka = new Kafka({
      },
 });
 
-const producer = kafka.producer({
-     allowAutoTopicCreation: true,
+const producer = kafka.producer({            //producer will generate the events aur phir ye events jayenge in kafka broker aur pboker me hain multiple topics jo in events/messages ko store krenge
+     allowAutoTopicCreation: true,     //user ne jis topic ko message bheja hai agr vo topic already exist nhi krta hai then it creates tha topic and sends that event into it
      transactionTimeout: 30000,
-     idempotent: true, 
+     idempotent: true,            //ensures exactly-once delivery so  that ek message baar baar na send ho into topics
      maxInFlightRequests: 5,
-     retry: {
+     retry: {                     //agr message delivery fail hogyi to we will retry
           retries: 5,
      },
 });

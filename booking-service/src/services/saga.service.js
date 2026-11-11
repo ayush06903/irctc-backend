@@ -15,17 +15,21 @@ const { paymentClient } = require('./paymentClient');
 
 // --- SEGMENT BOOKING: Added fromSeq/toSeq params ---
 async function executeHoldSeats(booking, seatIds, ttlSeconds, fromSeq, toSeq) {
+     //is record ko manage krne ke lie we do the entry in sagalog table
      const sagaLog = await prisma.sagaLog.create({
           data: {
                bookingId: booking.id,
                step: 'HOLD_SEATS',
                status: 'PENDING',
+                     //once we will lock the seats in inventory this saga step(HOLD_SEATS) will be done/completed so the status of this saga step would be completed....so each saga step has its own status
                request: { scheduleId: booking.scheduleId, seatIds, userId: booking.userId, ttlSeconds, fromSeq, toSeq }, // --- SEGMENT BOOKING
           },
      });
 
+     //next kaam hai inventory me jakr seats ko hold krna
      try {
           const result = await inventoryClient.holdSeats(
+                              //is inventoryClient.js ki holdSeats methodd me we send a http req to inventory  service and inventory service ha its own holdSeats method which will hold/lock the seat
                booking.scheduleId,
                seatIds,
                booking.userId,
@@ -35,18 +39,21 @@ async function executeHoldSeats(booking, seatIds, ttlSeconds, fromSeq, toSeq) {
                booking.id // idempotency: stable across retries of this hold
           );
 
+          //updating sagalog wali table
           await prisma.sagaLog.update({
                where: { id: sagaLog.id },
                data: { status: 'COMPLETED', response: result },
+                          //we change the status to completed signifying ki hmne successfully seat ko lock krdia hai
           });
 
+          //booking table ka status abhi pending hai we will convert that status to SEATS_HELD
           await prisma.booking.update({
                where: { id: booking.id },
                data: { status: 'SEATS_HELD' },
           });
 
           logger.info(`Saga HOLD_SEATS completed for booking ${booking.id}`);
-          return result;
+          return result;           //return krdiya mtlb phla saga step complete ho gya
 
      } catch (error) {
           const errorMsg = error.response?.data?.message || error.message;
@@ -59,13 +66,14 @@ async function executeHoldSeats(booking, seatIds, ttlSeconds, fromSeq, toSeq) {
 }
 
 async function executeCreatePayment(booking) {
-     const idempotencyKey = `${booking.id}-payment`;
+     const idempotencyKey = `${booking.id}-payment`;            //created idempotencyy key so that user duplicate payment se bache
 
+     //we created entry for this payment in sagalog table
      const sagaLog = await prisma.sagaLog.create({
           data: {
                bookingId: booking.id,
                step: 'CREATE_PAYMENT',
-               status: 'PENDING',
+               status: 'PENDING',         //coz we havn yet created payment order
                request: { bookingId: booking.id, amount: booking.totalAmount, userId: booking.userId },
           },
      });
@@ -209,6 +217,7 @@ async function compensateConfirmSeats(booking) {
  * Used when a booking needs to be rolled back (failure, timeout, cancellation).
  */
 async function compensateAll(booking, seatIds) {
+     //we will take all the steps of booking from sagaLog db ->all those steps whose status is completed just to figure out from where we have to rollback
      const completedSteps = await prisma.sagaLog.findMany({
           where: { bookingId: booking.id, status: 'COMPLETED' },
           orderBy: { createdAt: 'desc' },
@@ -217,12 +226,15 @@ async function compensateAll(booking, seatIds) {
      for (const step of completedSteps) {
           switch (step.step) {
                case 'CONFIRM_SEATS':
+                    //this was our third saga step
                     await compensateConfirmSeats(booking);
                     break;
                case 'CREATE_PAYMENT':
+                    //this was our second saga step
                     await compensateCreatePayment(booking);
                     break;
                case 'HOLD_SEATS':
+                    //this was our firs saga step-->agar hmara case HOLD_SEATS hai to iska mtlb hai is wale saga step ke baad hamara transaction fail hua hai and is ROLL_BACK wale saga step me hmne seats ko lock kra tha.. to jb hmm roll back krenge to in seats ko hmm release krenge to ye compensateReleaseSeats method seats ko release krta hai
                     await compensateHoldSeats(booking, seatIds);
                     break;
           }
